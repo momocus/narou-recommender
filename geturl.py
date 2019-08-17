@@ -15,9 +15,13 @@ df = pd.read_csv('output.csv')
 # 総合評価点で足切り
 df = df[df.global_point > 2000]
 
+# 文字数で足切り
+df = df[df.length > 800]
+
 # 教師データ作成用に、ncodeとurlをcsvに書き出し
-urls = map(lambda x: [x, 'https://ncode.syosetu.com/' + x + '/'], df['ncode'])
-f = open('urls.csv', 'a+')
+urls = map(lambda x: [x, '', 'https://ncode.syosetu.com/' + x.lower()], df['ncode'])
+f = open('urls.csv', 'a')
 writer = csv.writer(f, lineterminator='\n')
+writer.writerow(['ncode','point','url'])
 writer.writerows(list(urls))
 f.close
