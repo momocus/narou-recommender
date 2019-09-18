@@ -8,6 +8,21 @@ import pandas
 import statistics
 import math
 
+dirname = "output"
+genres = [
+    "101", "102",
+    "201", "202",
+    "301", "302", "303", "304", "305", "306", "307",
+    "401", "402", "403", "404",
+    "9901", "9902", "9903", "9904",
+    "9999",
+    "9801"
+]
+kaiwas = ["0-10", "11-20", "21-30", "31-40", "41-50",
+          "51-60", "61-70", "71-80", "81-90", "91-100"]
+buntais = [1, 2, 4, 6]
+types = ["t", "re"]
+
 
 def delay(s=10):
     """
@@ -103,6 +118,57 @@ def write_json(jsondata, filename):
         df = pandas.io.json.json_normalize(jsondata)
         header = not(os.path.exists(filename))
         df.to_csv(filename, index=False, header=header, mode="a")
+
+
+def make_filename(genre, kaiwa, buntai, ty):
+    """
+    なろう小説の情報が出力されるファイル名を作成する
+
+    Parameters
+    ----------
+    genre: str
+        小説のジャンル、"201"など
+    kaiwa: str
+        小説の会話率、"N-M"形式（単位%）で指定する
+    buntai: int
+        小説の文体、1/2/4/6のどれか
+    ty: str
+        小説のタイプ、"t"または"re"
+
+    Returns
+    -------
+    str
+        ファイルのパス、'output/201_0-10_1_re.csv'のような形式
+    """
+    filename = "{0}_{1}_{2}_{3}.csv".format(genre, kaiwa,
+                                            buntai, ty)
+    filename = os.path.join(dirname, filename)
+    return filename
+
+
+def read_allcaches():
+    """
+    キャッシュされているすべてのなろう小説の情報を取得する
+
+    返すDataFrameには、なろう小説APIが返すインデックスがつく。
+
+    Returns
+    -------
+    pandas.DataFrame
+        キャッシュされているすべてのなろう小説の情報
+    """
+    df = pandas.DataFrame()     # Empty DataFrame
+    for genre in genres:
+        for kaiwa in kaiwas:
+            for buntai in buntais:
+                for ty in types:
+                    filename = make_filename(genre, kaiwa, buntai, ty)
+                    try:
+                        cache_df = pandas.read_csv(filename)
+                        df = df.append(cache_df)
+                    except FileNotFoundError:
+                        pass
+    return df
 
 
 def count_cache(filename):
@@ -273,7 +339,7 @@ def get_write_lessthan2500(get_params, allcount, filename):
         delay()
 
 
-def get_data(genre, kaiwa, buntai, ty, dirname):
+def get_data(genre, kaiwa, buntai, ty):
     """
     なろう小説APIを使って小説情報を取得してファイルに保存する
 
@@ -315,8 +381,7 @@ def get_data(genre, kaiwa, buntai, ty, dirname):
           format(genre, kaiwa, buntai, ty), end="")
 
     # ファイル名
-    filename = genre + "_" + kaiwa + "_" + str(buntai) + "_" + ty + ".csv"
-    filename = os.path.join(dirname, filename)
+    filename = make_filename(genre, kaiwa, buntai, ty)
 
     # 前回取得した作品数
     cached_allcount = count_cache(filename)
@@ -364,17 +429,12 @@ def get_data(genre, kaiwa, buntai, ty, dirname):
             get_write_lessthan2500(get_params, count, filename)
 
 
-def make_directory(dirname):
+def make_directory():
     """
     出力先のディレクトリを作成する
 
     出力先のディレクトリと同じ名前のファイルがある場合は、
     エラーメッセージを出力してプログラムを終了する。
-
-    Parameters
-    ----------
-    dirname: str
-        ディレクトリ名
     """
     if os.path.exists(dirname):
         if os.path.isfile(dirname):
@@ -386,29 +446,12 @@ but file already exists.")
 
 
 def main():
-    # ディレクトリの作成
-    dirname = "output"
-    make_directory(dirname)
-
-    genres = [
-        "101", "102",
-        "201", "202",
-        "301", "302", "303", "304", "305", "306", "307",
-        "401", "402", "403", "404",
-        "9901", "9902", "9903", "9904",
-        "9999",
-        "9801"
-    ]
-    kaiwas = ["0-10", "11-20", "21-30", "31-40", "41-50",
-              "51-60", "61-70", "71-80", "81-90", "91-100"]
-    buntais = [1, 2, 4, 6]
-    types = ["t", "re"]
-
+    make_directory()     # ディレクトリの作成
     for genre in genres:
         for kaiwa in kaiwas:
             for buntai in buntais:
                 for ty in types:
-                    get_data(genre, kaiwa, buntai, ty, dirname)
+                    get_data(genre, kaiwa, buntai, ty)
 
 
 if __name__ == "__main__":
