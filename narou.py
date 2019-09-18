@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import requests
 import gzip
 import json
@@ -294,7 +292,7 @@ def get_data(genre, kaiwa, buntai, ty, dirname):
     なろう小説APIは、制限により1種類の検索につき2499件までしか取れない。
     これはAPIのGETパラメータのlim（最大出力数）とst（表示開始位置）から
     きている。
-    そこで、2500件以上のデータは、作品長さの指定を行い、おおよそ2000件
+    そこで、2500件以上のデータは、作品長さの指定を行い、おおよそ1500件
     以下ずつ取得する。
     おおよそ、各ジャンル、会話率は10%ずつ区切り、各文体、各タイプで
     この関数を呼び出せば、全作品の情報を取得できる。
@@ -347,7 +345,9 @@ def get_data(genre, kaiwa, buntai, ty, dirname):
     if allcount < 2500:         # 分割取得の必要なし
         get_write_lessthan2500(get_params, allcount, filename)
     else:                       # 作品の長さで分割して取得する
-        if genre == "9902":     # ADHOCK: ジャンル9902は分布が特殊なので固定分割
+        if genre == "9902":
+            # ADHOCK: ジャンル「詩」は分布が特殊。特に作品長さが100-1000に
+            #         作品が集中している。なので、それを細かく固定分割する。
             r = range(100, 1001, 20)
             starts = [str(start + 1) for start in r[0:len(r)-1]]
             ends = [str(end) for end in r[1:]]
