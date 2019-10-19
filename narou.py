@@ -1,7 +1,7 @@
 import requests
 import gzip
 import json
-import os
+import pathlib
 import sys
 import time
 import pandas
@@ -116,7 +116,7 @@ def write_json(jsondata, filename):
     else:
         jsondata = jsondata[1:]  # 先頭の{'allcount': n}を削る
         df = pandas.io.json.json_normalize(jsondata)
-        header = not(os.path.exists(filename))
+        header = not(pathlib.Path(filename).exists)
         df.to_csv(filename, index=False, header=header, mode="a")
 
 
@@ -142,7 +142,7 @@ def make_filename(genre, kaiwa, buntai, ty):
     """
     filename = "{0}_{1}_{2}_{3}.csv".format(genre, kaiwa,
                                             buntai, ty)
-    filename = os.path.join(dirname, filename)
+    filename = str(pathlib.Path(dirname).joinpath(filename))
     return filename
 
 
@@ -402,8 +402,9 @@ def get_data(genre, kaiwa, buntai, ty):
         print(" | GET")
 
     # キャッシュを削除する
-    if os.path.exists(filename):
-        os.remove(filename)
+    path = pathlib.Path("filename")
+    if path.exists():
+        path.unlink()
 
     get_params = {"genre": genre, "kaiwaritu": kaiwa,
                   "buntai": buntai, "type": ty}
@@ -436,13 +437,13 @@ def make_directory():
     出力先のディレクトリと同じ名前のファイルがある場合は、
     エラーメッセージを出力してプログラムを終了する。
     """
-    if os.path.exists(dirname):
-        if os.path.isfile(dirname):
-            print("Error: Try to create 'output' directory, \
+    path = pathlib.Path(dirname)
+    if path.is_file():          # outputファイルが存在してたらエラー
+        print("Error: Try to create 'output' directory, \
 but file already exists.")
-            sys.exit(1)
+        sys.exit(1)
     else:
-        os.mkdir(dirname)
+        path.mkdir(exist_ok=True)
 
 
 def main():
