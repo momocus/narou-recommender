@@ -71,7 +71,6 @@ class NarouBookmark:
         0    n3803fw      2
         1    n2509eu      1
         """
-        self.login_narou()
         love = [(ncode, 2) for ncode in self.get_ncodes(1)]
         like = [(ncode, 1) for ncode in self.get_ncodes(2)]
         dislike = [(ncode, 0) for ncode in self.get_ncodes(3)]
@@ -99,6 +98,7 @@ class NarouBookmark:
 
 def main():
     naroubookmark = NarouBookmark()
+    naroubookmark.login_narou()
     bookmarks = naroubookmark.get()
     print(bookmarks)
 
