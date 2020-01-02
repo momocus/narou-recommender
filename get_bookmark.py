@@ -76,7 +76,7 @@ class NarouBookmark:
         dislike = [(ncode, 0) for ncode in self.get_ncodes(3)]
         bookmarks = love + like + dislike
 
-        df = pandas.DataFrame(bookmarks, columns=['ncode', 'point'])
+        df = pandas.DataFrame(bookmarks, columns=["ncode", "point"])
         return df
 
     @staticmethod
