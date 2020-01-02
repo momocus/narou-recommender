@@ -30,35 +30,38 @@ class NarouBookmark:
         login_url = "https://ssl.syosetu.com/login/login/"
         self.session.post(login_url, headers=self.headers, data=login_info)
 
-    def get_each_category(self, id):
+    def get_ncodes(self, category_id):
         """
-        指定されたカテゴリidでブックマークされた小説のncodeを取得する
-        ブックマークは下記の通りカテゴリ分けされているため、カテゴリに応じてpointをつける
-        category1: とても好きな作品 -> 2point
-        category2: まあまあ好きな作品-> 1point
-        category3: 好きではない作品-> 0point
+        指定されたカテゴリidでブックマークされた小説のncodeを取得する。
 
         Parameters
         ----------
-        id: int
+        category_id: int
+            小説家になろうのマイページで作ったブックマークカテゴリの番号
 
         Returns
         -------
-        bookmark: [[ncode,point]]
+        ncodes: List[str]
+            ncodeのリスト
         """
-        url = "https://syosetu.com/favnovelmain/list/?nowcategory=" + str(id)
+        url = "https://syosetu.com/favnovelmain/list/?nowcategory={0}".format(
+            str(category_id))
         res = self.session.get(url, headers=self.headers)
         res.encoding = res.apparent_encoding
         soup = BeautifulSoup(res.text, "html.parser")
         anchors = soup.select("a.title")
-        point = NarouBookmark.id2point(id)
-        bookmark = [[NarouBookmark.url2ncode(
-            x.attrs["href"]), point] for x in anchors]
-        return bookmark
+        ncodes = [NarouBookmark.url2ncode(x.attrs["href"]) for x in anchors]
+        return ncodes
 
     def get(self):
         """
         なろうにログインしてブックマークのcategory1,2,3を取得してDataFrameにする
+
+        ブックマークは下記の通りカテゴリ分けされていると仮定し、
+        カテゴリに応じてpointをつける。
+        category1: とても好きな作品   -> 2point
+        category2: まあまあ好きな作品 -> 1point
+        category3: 好きではない作品   -> 0point
 
         Returns
         -------
@@ -69,27 +72,13 @@ class NarouBookmark:
         1    n2509eu      1
         """
         self.login_narou()
-        # love
-        bookmarks = self.get_each_category(1)
-        # like
-        bookmarks.extend(self.get_each_category(2))
-        # dislike
-        bookmarks.extend(self.get_each_category(3))
+        love = [(ncode, 2) for ncode in self.get_ncodes(1)]
+        like = [(ncode, 1) for ncode in self.get_ncodes(2)]
+        dislike = [(ncode, 0) for ncode in self.get_ncodes(3)]
+        bookmarks = love + like + dislike
 
         df = pandas.DataFrame(bookmarks, columns=['ncode', 'point'])
         return df
-
-    @staticmethod
-    def id2point(id):
-        if id == 1:
-            point = 2
-        elif id == 2:
-            point = 1
-        elif id == 3:
-            point = 0
-        else:
-            print('error')
-        return point
 
     @staticmethod
     def url2ncode(nobel_url):
