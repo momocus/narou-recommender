@@ -1,9 +1,6 @@
 # 教師データ作成用に、output.csvからncodeとurlをcsvに書き出す
 
 import pandas as pd
-import numpy as np
-from scipy.sparse import csr_matrix
-from sklearn.neighbors import NearestNeighbors
 import csv
 
 df = pd.read_csv('output.csv')
@@ -19,9 +16,10 @@ df = df[df.global_point > 2000]
 df = df[df.length > 800]
 
 # 教師データ作成用に、ncodeとurlをcsvに書き出し
-urls = map(lambda x: [x, '', 'https://ncode.syosetu.com/' + x.lower()], df['ncode'])
+base_url = 'https://ncode.syosetu.com/'
+urls = map(lambda ncode: [ncode, '', base_url + ncode.lower()], df['ncode'])
 f = open('urls.csv', 'a')
 writer = csv.writer(f, lineterminator='\n')
-writer.writerow(['ncode','point','url'])
+writer.writerow(['ncode', 'point', 'url'])
 writer.writerows(list(urls))
 f.close
