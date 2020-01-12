@@ -7,6 +7,8 @@ import time
 import pandas
 import statistics
 import math
+import urllib
+import bs4
 
 dirname = "output"
 genres = [
@@ -444,6 +446,90 @@ but file already exists.")
         sys.exit(1)
     else:
         path.mkdir(exist_ok=True)
+
+
+def fetch_novel(ncode, is_series, pages):
+    """
+    ncodeで指定した小説の本文を取得する
+
+    """
+    # YahooAPIで解析できる上限が10KBであるため、
+    # 2000文字を上限にする
+    # (10KBだと2500~5000文字くらい。余裕を持って2000文字)
+    lim = 2000
+    if is_series:
+        honbun = get_series_honbun(ncode, pages, lim)
+    else:
+        honbun = get_ss_honbun(ncode, lim)
+
+    return honbun
+
+
+def get_series_honbun(ncode, pages, lim):
+
+    honbun = ""
+    for part in range(1, pages+1):
+        time.sleep(1)  # 次の部分取得までは1秒間の時間を空ける
+
+        # 作品本文ページのURL
+        url = "https://ncode.syosetu.com/{}/{:d}/".format(ncode, part)
+
+        res = urllib.request.urlopen(url)
+        soup = bs4.BeautifulSoup(res, "html.parser")
+
+        # CSSセレクタで本文を指定
+        honbun = honbun + soup.select_one("#novel_honbun").text + "\n"
+
+        if len(honbun) > lim:
+            honbun = honbun[0:lim]
+            break
+
+    return honbun
+
+
+def get_ss_honbun(ncode, lim):
+    time.sleep(1)  # 次の部分取得までは1秒間の時間を空ける
+    url = "https://ncode.syosetu.com/{}/".format(ncode)
+
+    res = urllib.request.urlopen(url)
+    soup = bs4.BeautifulSoup(res, "html.parser")
+    honbun = soup.select_one("#novel_honbun").text + "\n"
+
+    if len(honbun) > lim:
+        honbun = honbun[0:lim]
+
+    return honbun
+
+
+def get_ranking(order, noveltype, lim):
+    """
+    order,noveltypeで指定したランキングから、lim件の小説情報を取得して
+    dataframeにする
+
+    Usage:
+    df = get_ranking("dailypoint", "ter",20)
+        dailypoint: 日刊ポイント数順
+        ter: 短編と完結済連載小説
+
+    Returns
+    -------
+    pandas.dataframe
+        order,noveltypeで指定したランキングのトップ100に入る作品の情報
+    """
+    parms = {
+        "gzip": 5,
+        "out": "json",
+        "order": order,
+        "lim": lim,
+        "type": noveltype
+    }
+    api_url = "https://api.syosetu.com/novelapi/api/"
+    res = requests.get(api_url, params=parms)
+    jsondata = json.loads(gzip.decompress(res.content))
+    jsondata = jsondata[1:]  # 先頭の{'allcount': n}を削る
+    df = pandas.io.json.json_normalize(jsondata)
+    df["ncode"] = df["ncode"].str.lower()
+    return df
 
 
 def main():
