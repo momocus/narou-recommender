@@ -15,19 +15,17 @@ class NarouBookmark:
 
     def __init__(self):
         self.session = requests.Session()
-        inifile = configparser.ConfigParser()
-        inifile.read('./setting.ini', 'UTF-8')
-        self.narouid = inifile.get('narou', 'id')
-        self.password = inifile.get('narou', 'pass')
 
     def login_narou(self):
         """
         なろうにログインする
         """
         # メールアドレスとパスワードの指定
+        inifile = configparser.ConfigParser()
+        inifile.read("./setting.ini")
         login_info = {
-            "narouid": self.narouid,
-            "pass": self.password
+            "narouid": inifile.get("narou", "id"),
+            "pass": inifile.get("narou", "pass")
         }
         # なろうURL
         login_url = "https://ssl.syosetu.com/login/login/"
