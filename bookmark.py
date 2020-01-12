@@ -92,7 +92,7 @@ class NarouBookmark:
         ----------
         ncode: str
         """
-        ncode = parse.urlparse(nobel_url).path.replace("/", "")
+        ncode = parse.urlparse(nobel_url).path.replace("/", "").upper()
         return ncode
 
 
