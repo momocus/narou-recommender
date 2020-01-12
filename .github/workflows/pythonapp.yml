@@ -22,3 +22,7 @@ jobs:
         pip install flake8
         # stop the build if there are flake8 errors
         flake8 . --count --show-source --statistics
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pytest
