@@ -7,6 +7,8 @@ import time
 import pandas
 import statistics
 import math
+from typing import List, Dict, Union, Tuple
+
 
 dirname = "output"
 genres = [
@@ -18,13 +20,15 @@ genres = [
     "9999",
     "9801"
 ]
-kaiwas = ["0-10", "11-20", "21-30", "31-40", "41-50",
-          "51-60", "61-70", "71-80", "81-90", "91-100"]
+kaiwas = [
+    "0-10", "11-20", "21-30", "31-40", "41-50",
+    "51-60", "61-70", "71-80", "81-90", "91-100"
+]
 buntais = [1, 2, 4, 6]
 types = ["t", "re"]
 
 
-def delay(s=10):
+def delay(s: int = 10) -> None:
     """
     なろう小説APIを叩いたあとに一定時間待つ
 
@@ -36,7 +40,8 @@ def delay(s=10):
     time.sleep(s)
 
 
-def get_jsondata(get_params):
+def get_jsondata(get_params: Dict[str, Union[str, int]]
+                 ) -> List[Dict[str, Union[str, int]]]:
     """
     指定したGETパラメータでなろう小説APIからJSONデータを取る
 
@@ -63,7 +68,8 @@ def get_jsondata(get_params):
     api_url = "https://api.syosetu.com/novelapi/api/"
     res = requests.get(api_url, params=get_params)
     if res.ok:
-        jsondata = json.loads(gzip.decompress(res.content))
+        jsondata: List[Dict[str, Union[str, int]]] = json.loads(
+            gzip.decompress(res.content))
         return jsondata
     else:                       # アクセスエラー
         print("Error: API response is BAD.")
@@ -71,7 +77,7 @@ def get_jsondata(get_params):
         sys.exit(1)
 
 
-def get_allcount(get_params):
+def get_allcount(get_params: Dict[str, Union[str, int]]) -> int:
     """
     指定されたGETパラメータで全作品数を取得して返す
 
@@ -93,10 +99,15 @@ def get_allcount(get_params):
     get_params["of"] = "n"
     jsondata = get_jsondata(get_params)
     allcount = jsondata[0]["allcount"]
-    return allcount
+    if isinstance(allcount, int):
+        return allcount
+    else:
+        raise TypeError
 
 
-def write_json(jsondata, filename):
+def write_json(jsondata: List[Dict[str, Union[str, int]]],
+               filename: str
+               ) -> None:
     """
     なろう小説APIにて取得したJSONデータをファイルに書き込む関数
 
@@ -120,7 +131,7 @@ def write_json(jsondata, filename):
         df.to_csv(filename, index=False, header=header, mode="a")
 
 
-def make_filename(genre, kaiwa, buntai, ty):
+def make_filename(genre: str, kaiwa: str, buntai: int, ty: str) -> str:
     """
     なろう小説の情報が出力されるファイル名を作成する
 
@@ -146,7 +157,7 @@ def make_filename(genre, kaiwa, buntai, ty):
     return filename
 
 
-def read_allcaches():
+def read_allcaches() -> pandas.DataFrame:
     """
     キャッシュされているすべてのなろう小説の情報を取得する
 
@@ -171,7 +182,7 @@ def read_allcaches():
     return df
 
 
-def count_cache(filename):
+def count_cache(filename: str) -> int:
     """
     キャッシュしている作品数を返す
 
@@ -198,7 +209,8 @@ def count_cache(filename):
         return 0
 
 
-def get_statistics(get_params):
+def get_statistics(get_params: Dict[str, Union[str, int]]
+                   ) -> Tuple[int, float]:
     """
     作品の長さを1000件サンプリングして、中央値とlogスケールの標準偏差を返す。
 
@@ -222,24 +234,31 @@ def get_statistics(get_params):
     """
     get_params = dict(get_params)  # コピー
     # 1000件の作品長さをサンプリングする
-    lengths = []
+    lengths: List[int] = []
     for i in range(2):
         get_params["of"] = "l"
         get_params["lim"] = 500
         get_params["st"] = 500 * i + 1
         jsondata = get_jsondata(get_params)
         jsondata = jsondata[1:]     # 先頭のallcountを削る
-        lengths += [elem["length"] for elem in jsondata]
+        length = [elem["length"] for elem in jsondata]
+        if isinstance(length, int):
+            lengths += length
+        else:
+            raise TypeError
         delay()
     # 中央値を取る
-    median = statistics.median(lengths)
+    median = round(statistics.median(lengths))
     # logスケールでの標準偏差をとる
     log_lengths = [math.log(l) for l in lengths]
     log_stdev = statistics.stdev(log_lengths)
     return (median, log_stdev)
 
 
-def make_splitlengths(allcount, median, log_stdev):
+def make_splitlengths(allcount: int,
+                      median: float,
+                      log_stdev: float
+                      ) -> List[str]:
     """
     作品長さに対する作品数の傾向から、ほどよい分割ができる作品長さ範囲を作成する
 
@@ -264,7 +283,7 @@ def make_splitlengths(allcount, median, log_stdev):
 
     Returns
     -------
-    list[str]
+    List[str]
         なろう小説APIのパラメータのlengthに与えることができる文字列のリスト
     """
     # HACK:
@@ -277,7 +296,7 @@ def make_splitlengths(allcount, median, log_stdev):
     #   2019/09/05現在、なろう小説APIから帰ってくる全件数は、GETパラメータの調整で
     #   12000件ほどまで抑えられている。
     #   そのため、しばらくはこの制限を越えることはないと思われる。
-    sigma_biases = [
+    sigma_biases: List[List[float]] = [
         [0],
         [-0.68, 0, 0.68],
         [-1.16, -0.68, -0.32, 0, 0.32, 0.68, 1.16],
@@ -295,7 +314,10 @@ def make_splitlengths(allcount, median, log_stdev):
     return ranges
 
 
-def get_write_lessthan2500(get_params, allcount, filename):
+def get_write_lessthan2500(get_params: Dict[str, Union[str, int]],
+                           allcount: int,
+                           filename: str
+                           ) -> None:
     """
     与えられたGETパラメータで2500件未満の小説情報を取得する
 
@@ -339,7 +361,7 @@ def get_write_lessthan2500(get_params, allcount, filename):
         delay()
 
 
-def get_data(genre, kaiwa, buntai, ty):
+def get_data(genre: str, kaiwa: str, buntai: int, ty: str) -> None:
     """
     なろう小説APIを使って小説情報を取得してファイルに保存する
 
@@ -388,8 +410,10 @@ def get_data(genre, kaiwa, buntai, ty):
     print(" | cache:" + "{0:>6}".format(cached_allcount), end="")
 
     # 最新の作品数
-    get_params = {"genre": genre, "kaiwaritu": kaiwa,
-                  "buntai": buntai, "type": ty}
+    get_params: Dict[str, Union[str, int]] = {
+        "genre": genre, "kaiwaritu": kaiwa,
+        "buntai": buntai, "type": ty
+    }
     allcount = get_allcount(get_params)
     print(" | allcount:" + "{0:>6}".format(allcount), end="")
     delay(1)
@@ -430,7 +454,7 @@ def get_data(genre, kaiwa, buntai, ty):
             get_write_lessthan2500(get_params, count, filename)
 
 
-def make_directory():
+def make_directory() -> None:
     """
     出力先のディレクトリを作成する
 
@@ -446,7 +470,7 @@ but file already exists.")
         path.mkdir(exist_ok=True)
 
 
-def main():
+def main() -> None:
     make_directory()     # ディレクトリの作成
     for genre in genres:
         for kaiwa in kaiwas:
