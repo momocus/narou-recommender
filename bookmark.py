@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib import parse
 import pandas
+import configparser
 
 
 class NarouBookmark:
@@ -14,17 +15,19 @@ class NarouBookmark:
 
     def __init__(self):
         self.session = requests.Session()
+        inifile = configparser.ConfigParser()
+        inifile.read('./setting.ini', 'UTF-8')
+        self.narouid = inifile.get('narou', 'id')
+        self.password = inifile.get('narou', 'pass')
 
     def login_narou(self):
         """
         なろうにログインする
         """
         # メールアドレスとパスワードの指定
-        narouid = ""
-        password = ""
         login_info = {
-            "narouid": narouid,
-            "pass": password
+            "narouid": self.narouid,
+            "pass": self.password
         }
         # なろうURL
         login_url = "https://ssl.syosetu.com/login/login/"
