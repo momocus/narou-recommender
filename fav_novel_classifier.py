@@ -14,11 +14,12 @@ class Model(metaclass=ABCMeta):
 
     def __init__(self):
         self.kyoshi = analyze_data.get_kyoshi()
+        self.answer_file = "./data/answer.csv"
 
     def load_data(self):
         # 目的変数
         # pointが1か2か(好きかめっちゃ好きか)はといったん区別しないでおく
-        objective = self.kyoshi.point.apply(lambda x: x > 0)
+        objective = self.get_object()
 
         # 説明変数
         # 数値変換できない説明変数,使えなさそうな説明変数は削除
@@ -34,6 +35,9 @@ class Model(metaclass=ABCMeta):
             train_test_split(explanatory, objective,
                              test_size=0.2, random_state=0)
 
+    def get_object(self):
+        return self.kyoshi.point.apply(lambda x: x > 0)
+
     def load(self):
         with open(self.modelname, mode='rb') as fp:
             lr = pickle.load(fp)
@@ -46,32 +50,16 @@ class Model(metaclass=ABCMeta):
              "keyword", "general_firstup", "general_lastup", "time",
              "isbl", "isgl", "pc_or_k", "novelupdated_at", "updated_at",
              "istensei", "istenni", "iszankoku", "isr15",
-             "writer", ], axis=1).fillna(0)
-        return self.model.predict(explanatory)
+             "writer", "ncode"], axis=1).fillna(0)
+        target["point"] = self.model.predict(explanatory)
+        answer = target[["title", "ncode", "point"]]
+        answer.to_csv(self.answer_file, index=False)
 
     @abstractmethod
     def make(self):
         pass
 
-    @abstractmethod
     def test(self):
-        pass
-
-
-class LogisticRegressionModel(Model):
-
-    modelname = "./model/lrm.pickle"
-
-    def make(self):
-        # モデルの作成（トレーニング）
-        lr = LogisticRegression()
-        lr.fit(self.exp_train, self.obj_train)  # モデルの重みを学習
-        self.model = lr
-        with open(self.modelname, mode='wb') as fp:
-            pickle.dump(lr, fp)
-
-    def test(self):
-
         # モデルの性能評価
         obj_pred = self.model.predict(self.exp_test)
         # 評価結果の表示
@@ -89,6 +77,22 @@ class LogisticRegressionModel(Model):
         print("recall = ", recall_score(y_true=self.obj_test, y_pred=obj_pred))
 
         print("f1 score = ", f1_score(y_true=self.obj_test, y_pred=obj_pred))
+
+
+class LogisticRegressionModel(Model):
+
+    modelname = "./model/lrm.pickle"
+
+    def make(self):
+        # モデルの作成（トレーニング）
+        lr = LogisticRegression()
+        lr.fit(self.exp_train, self.obj_train)  # モデルの重みを学習
+        self.model = lr
+        with open(self.modelname, mode='wb') as fp:
+            pickle.dump(lr, fp)
+
+    def test(self):
+        super(LogisticRegressionModel, self).test()
 
         # AUC（曲線下面積）
         obj_score = self.model.predict_proba(
@@ -118,23 +122,23 @@ class SVMModel(Model):
             pickle.dump(model, fp)
 
     def test(self):
-        obj_pred = self.model.predict(self.exp_test)
-        print("confusion matrix = \n", confusion_matrix(
-            y_true=self.obj_test, y_pred=obj_pred))
-        print("accuracy = ", accuracy_score(
-            y_true=self.obj_test, y_pred=obj_pred))
-        print("precision = ", precision_score(
-            y_true=self.obj_test, y_pred=obj_pred))
-        print("recall = ", recall_score(y_true=self.obj_test, y_pred=obj_pred))
-
-        print("f1 score = ", f1_score(y_true=self.obj_test, y_pred=obj_pred))
+        super(SVMModel, self).test()
+        # 結果をプロットしたいときは説明変数を削減する必要がある（PCAとかで）
+        # exp_combined = numpy.vstack((self.exp_train, self.exp_test))
+        # obj_combined = numpy.hstack(
+        #     (self.obj_train, self.obj_test)).astype(numpy.integer)
+        # plt.figure(figsize=(13, 8))
+        # plot_decision_regions(exp_combined, obj_combined,
+        #                       clf=self.model,  res=0.02)
+        # plt.show()
 
 
 def main():
-    lrm = LogisticRegressionModel()
-    lrm.load_data()
-    lrm.make()
-    lrm.test()
+    model = SVMModel()
+    model.load_data()
+    model.load()
+    model.test()
+    model.classfy()
 
 
 if __name__ == "__main__":
