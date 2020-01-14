@@ -16,17 +16,15 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r requirements/prod.txt
     - name: Lint with flake8
       run: |
-        pip install flake8 flake8-quotes
+        pip install -r requirements/dev.txt
         # stop the build if there are flake8 errors
-        flake8 . --count --show-source --statistics --inline-quotes=double
+        flake8 . --config=setup.cfg --count --show-source --statistics
     - name: Lint with mypy
       run: |
-        pip install mypy
-        mypy . --show-error-context
+        mypy . --config-file setup.cfg --show-error-context
     - name: Test with pytest
       run: |
-        pip install pytest
         pytest

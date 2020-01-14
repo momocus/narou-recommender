@@ -1,0 +1,6 @@
+# 開発環境用requirements
+-r common.txt
+flake8
+flake8-quotes
+mypy
+pytest
