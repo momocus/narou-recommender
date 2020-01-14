@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from urllib import parse
 import pandas
 import configparser
+from typing import List
 
 
 class NarouBookmark:
@@ -13,10 +14,10 @@ class NarouBookmark:
     Gecko/20100101 Firefox/69.0"
     headers = {"user-agent": user_agent}
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.session = requests.Session()
 
-    def login_narou(self):
+    def login_narou(self) -> None:
         """
         なろうにログインする
         """
@@ -31,7 +32,7 @@ class NarouBookmark:
         login_url = "https://ssl.syosetu.com/login/login/"
         self.session.post(login_url, headers=self.headers, data=login_info)
 
-    def get_ncodes(self, category_id):
+    def get_ncodes(self, category_id: int) -> List[str]:
         """
         指定されたカテゴリidでブックマークされた小説のncodeを取得する。
 
@@ -54,7 +55,7 @@ class NarouBookmark:
         ncodes = [NarouBookmark.url2ncode(x.attrs["href"]) for x in anchors]
         return ncodes
 
-    def get(self):
+    def get(self) -> pandas.DataFrame:
         """
         なろうにログインしてブックマークのcategory1,2,3を取得してDataFrameにする
 
@@ -81,7 +82,7 @@ class NarouBookmark:
         return df
 
     @staticmethod
-    def url2ncode(nobel_url):
+    def url2ncode(nobel_url: str) -> str:
         """
         なろう小説のURLからncodeを抜き出す
 
@@ -97,7 +98,7 @@ class NarouBookmark:
         return ncode
 
 
-def main():
+def main() -> None:
     naroubookmark = NarouBookmark()
     naroubookmark.login_narou()
     bookmarks = naroubookmark.get()
